@@ -1,10 +1,14 @@
 @extends('layouts.app')
 
 @section('title', 'Daftar Pemasok')
-@section('page-title', 'Daftar Pemasok')
+@section('page-title', 'Daftar Suppliers')
 
 @section('content')
-<a href="{{ route('suppliers.create') }}" class="btn btn-primary mb-3">Tambah Pemasok</a>
+
+{{-- Tombol Tambah Pemasok hanya untuk admin & store_manager --}}
+@if(Auth::user()->role === 'admin' || Auth::user()->role === 'store_manager')
+    <a href="{{ route('suppliers.create') }}" class="btn btn-primary mb-3">Tambah Pemasok</a>
+@endif
 
 <table class="table table-bordered">
     <thead>
@@ -13,7 +17,9 @@
             <th>Alamat</th>
             <th>Telepon</th>
             <th>Email</th>
-            <th>Aksi</th>
+            @if(Auth::user()->role === 'admin' || Auth::user()->role === 'store_manager')
+                <th>Aksi</th>
+            @endif
         </tr>
     </thead>
     <tbody>
@@ -23,6 +29,9 @@
                 <td>{{ $supplier->alamat }}</td>
                 <td>{{ $supplier->no_telepon }}</td>
                 <td>{{ $supplier->email }}</td>
+                
+                {{-- Aksi hanya untuk admin & store_manager --}}
+                @if(Auth::user()->role === 'admin' || Auth::user()->role === 'store_manager')
                 <td>
                     <a href="{{ route('suppliers.edit', $supplier->id) }}" class="btn btn-warning btn-sm">Edit</a>
                     <form action="{{ route('suppliers.destroy', $supplier->id) }}" method="POST" class="d-inline">
@@ -31,6 +40,7 @@
                         <button class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus pemasok ini?')">Hapus</button>
                     </form>
                 </td>
+                @endif
             </tr>
         @empty
             <tr>

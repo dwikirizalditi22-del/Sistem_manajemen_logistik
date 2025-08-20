@@ -17,19 +17,26 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'nama' => 'required|string',
-            'password' => 'required|string',
+        $request->validate([
+            'nama' => 'required',
+            'password' => 'required',
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-            return redirect()->intended('/dashboard');
+        // Cek apakah username ada
+        $user = User::where('nama', $request->nama)->first();
+
+        if (!$user) {
+            return back()->withErrors(['nama' => 'Username tidak ditemukan.'])->withInput();
         }
 
-        return back()->withErrors([
-            'nama' => 'The provided credentials do not match our records.',
-        ]);
+        // Cek apakah password sesuai
+        if (!Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['password' => 'Password salah.'])->withInput();
+        }
+
+        // Kalau semua benar → login
+        Auth::login($user);
+        return redirect()->intended('dashboard'); // ubah sesuai route dashboard kamu
     }
 
     public function showRegisterForm()

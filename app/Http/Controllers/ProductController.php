@@ -1,13 +1,17 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Sale;
+use App\Models\Supplier;
+use App\Models\CateSupplier;
 use Illuminate\Http\Request;
+
 
 class ProductController extends Controller
 {
+   
     public function index()
     {
         $products = Product::all();
@@ -26,8 +30,8 @@ class ProductController extends Controller
             'name' => 'required',
             'category_id' => 'required|exists:categories,id',
             'unit' => 'required',
-            'purchase_price' => 'required|numeric',
-            'selling_price' => 'required|numeric',
+            
+            
             'stock_quantity' => 'required|numeric',
             // 'minimum_stock' => 'required|numeric',
             'description' => 'nullable|string',
@@ -35,11 +39,11 @@ class ProductController extends Controller
         ]);
 
         $product = new Product();
+        $product->kode_produk = 'PRD-' . strtoupper(uniqid());
         $product->nama_produk = $validated['name'];
         $product->category_id = $validated['category_id'];
         $product->satuan = $validated['unit'];
-        $product->harga_beli = $validated['purchase_price'];
-        $product->harga_jual = $validated['selling_price'];
+        
         $product->stok = $validated['stock_quantity'];
         // $product->minimum_stock = $validated['minimum_stock'];
         $product->deskripsi = $validated['description'] ?? null;
@@ -62,7 +66,7 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'stock_quantity' => 'required|numeric',
             // 'minimum_stock' => 'nullable|numeric',
-            'harga_jual' => 'required|numeric',
+            
             // 'is_active' => 'nullable|boolean',
         ]);
 
@@ -70,7 +74,7 @@ class ProductController extends Controller
         $product->category_id = $validated['category_id'];
         $product->stok = $validated['stock_quantity'];
         // $product->minimum_stock = $validated['minimum_stock'] ?? 0;
-        $product->harga_jual = $validated['harga_jual'];
+        
         // $product->is_active = $request->has('is_active') || $validated['is_active'] == 1;
         $product->save();
 
@@ -88,4 +92,13 @@ class ProductController extends Controller
         $product->delete();
         return redirect()->route('products.index')->with('success', 'Produk berhasil dihapus.');
     }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    
+
+
 }

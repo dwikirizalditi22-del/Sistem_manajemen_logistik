@@ -47,13 +47,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="total_harga">Total Harga</label>
-                                    <input type="text" name="total_harga" id="total_harga" class="form-control" 
-                                        value="Rp {{ number_format($purchase->total_harga, 0, ',', '.') }}" readonly>
-                                </div>
-                            </div>
+                           
                         </div>
                         <h5>Detail Pembelian</h5>
                         <div class="table-responsive">
@@ -62,8 +56,7 @@
                                     <tr>
                                         <th>Produk</th>
                                         <th>Jumlah</th>
-                                        <th>Harga Beli</th>
-                                        <th>Subtotal</th>
+                                       
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -71,8 +64,7 @@
                                     <tr>
                                         <td>{{ $detail->product->nama_produk }}</td>
                                         <td>{{ $detail->jumlah }}</td>
-                                        <td>Rp {{ number_format($detail->harga_beli, 0, ',', '.') }}</td>
-                                        <td>Rp {{ number_format($detail->subtotal, 0, ',', '.') }}</td>
+                                        
                                     </tr>
                                     @endforeach
                                 </tbody>

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\{
     AuthController,
     DashboardController,
@@ -43,8 +44,25 @@ Route::get('/', fn () => redirect()->route('login'));
 */
 Route::middleware('auth')->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Dashboard Redirect Otomatis (Link ke dashboard pakai route ini saja)
+    Route::get('/dashboard-redirect', function () {
+        if (Auth::user()->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        } else {
+            return redirect()->route('user.dashboard');
+        }
+    })->name('dashboard.redirect'); // Diganti nama route-nya agar tidak bentrok
+    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.index');
+    // Route untuk admin
+    Route::get('/admin/dashboard', [DashboardController::class, 'index'])
+    ->middleware('auth')
+    ->name('admin.dashboard');
+
+    // Route untuk user biasa
+  // Untuk user biasa
+Route::get('/user/dashboard', [DashboardController::class, 'index'])
+->name('user.dashboard')
+->middleware('auth');
 
     // User Profile
     Route::get('/profile', [UserController::class, 'profile'])->name('profile');
@@ -72,4 +90,16 @@ Route::middleware('auth')->group(function () {
 
     // Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::get('/laporan-produk-tanpa-harga', [ReportController::class, 'productsWithoutPrice']);
+    Route::get('/reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
+    Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
+    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    
+        // tambahkan route admin lainnya di sini
+   
+    
+
+
 });

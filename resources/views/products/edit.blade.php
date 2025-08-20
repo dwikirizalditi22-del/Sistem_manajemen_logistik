@@ -37,10 +37,7 @@
                 <input type="number" name="minimum_stock" class="form-control" value="{{ old('minimum_stock', $product->minimum_stock) }}">
             </div> -->
 
-            <div class="mb-3">
-                <label for="harga_jual" class="form-label">Harga Jual</label>
-                <input type="number" name="harga_jual" class="form-control" value="{{ old('harga_jual', $product->harga_jual) }}" required>
-            </div>
+           
 
             <!-- <div class="mb-3">
                 <label class="form-label">Status</label>

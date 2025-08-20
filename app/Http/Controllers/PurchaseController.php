@@ -6,12 +6,13 @@ use App\Models\Purchase;
 use App\Models\Product;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PurchaseController extends Controller
 {
     public function index()
     {
-        $purchases = Purchase::with('supplier', 'purchaseDetails')->latest()->paginate(10);
+        $purchases = Purchase::with('supplier', 'purchaseDetails.product')->latest()->paginate(10);
         $suppliers = Supplier::all();
 
         return view('purchases.index', compact('purchases', 'suppliers'));
@@ -19,14 +20,7 @@ class PurchaseController extends Controller
 
     public function create()
     {
-        $products = Product::all()->map(function ($product) {
-            return (object)[
-                'id' => $product->id,
-                'nama_produk' => $product->nama_produk,
-                'harga_beli' => $product->harga_beli
-            ];
-        });
-
+        $products = Product::all();
         $suppliers = Supplier::all();
 
         return view('purchases.create', compact('products', 'suppliers'));
@@ -40,41 +34,54 @@ class PurchaseController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.unit_price' => 'required|numeric|min:0', // fix error unit_price
         ]);
 
         $purchase = new Purchase();
         $purchase->supplier_id = $request->supplier_id;
         $purchase->tanggal = $request->tanggal;
         $purchase->kode_pembelian = 'PB-' . time();
-        $purchase->total_harga = $request->total_amount;
-        $purchase->user_id = auth()->id();
-        $purchase->status = 'pending'; // ✅ Tambahkan default status
+        $purchase->user_id = Auth::id();
+        $purchase->status = 'pending';
+        $purchase->total_harga = 0;
         $purchase->save();
 
+        $totalHarga = 0;
+
+        // simpan detail pembelian
         foreach ($request->items as $item) {
+            $subtotal = $item['quantity'] * $item['unit_price'];
             $purchase->purchaseDetails()->create([
                 'product_id' => $item['product_id'],
-                'jumlah' => $item['quantity'], // ✅ Sesuai kolom di DB
-                'harga_beli' => $item['unit_price'],
-                'subtotal' => $item['quantity'] * $item['unit_price'],
+                'jumlah' => $item['quantity'],
+                'unit_price' => $item['unit_price'],
+                'subtotal' => $subtotal,
             ]);
+            $totalHarga += $subtotal;
         }
 
-        return redirect()->route('purchases.index')->with('success', 'Pembelian berhasil disimpan.');
+        // update total harga pembelian
+        $purchase->total_harga = $totalHarga;
+        $purchase->save();
+
+        return redirect()->route('purchases.index')->with('success', 'Pemesanan berhasil disimpan. Menunggu validasi Store Manager.');
     }
 
     public function show(Purchase $purchase)
     {
+        $purchase->load('supplier', 'purchaseDetails.product');
         return view('purchases.show', compact('purchase'));
     }
 
     public function edit(Purchase $purchase)
     {
+        // hanya admin atau store_manager yang bisa edit
+        if (!in_array(Auth::user()->role, ['admin', 'store_manager'])) {
+            return redirect()->route('purchases.index')->with('error', 'Anda tidak memiliki izin untuk mengedit.');
+        }
+
         $suppliers = Supplier::all();
         $products = Product::all();
-        
-        // Pastikan relasi sudah dimuat
         $purchase->load('purchaseDetails.product');
 
         return view('purchases.edit', compact('purchase', 'suppliers', 'products'));
@@ -82,16 +89,28 @@ class PurchaseController extends Controller
 
     public function update(Request $request, Purchase $purchase)
     {
-        if ($request->has('status')) {
-            $purchase->status = $request->status;
-            $purchase->save();
+        // hanya admin atau store_manager yang bisa update status
+        if (!in_array(Auth::user()->role, ['admin', 'store_manager'])) {
+            return redirect()->route('purchases.index')->with('error', 'Anda tidak memiliki izin untuk memperbarui.');
         }
 
-        return redirect()->route('purchases.index')->with('success', 'Status pembelian diperbarui.');
+        if ($request->has('status')) {
+            $purchase->status = $request->status; // completed / cancelled
+            $purchase->save();
+
+            return redirect()->route('purchases.index')->with('success', 'Status pembelian diperbarui.');
+        }
+
+        return redirect()->route('purchases.index')->with('info', 'Tidak ada perubahan yang dilakukan.');
     }
 
     public function destroy(Purchase $purchase)
     {
+        // hanya admin atau store_manager yang bisa delete
+        if (!in_array(Auth::user()->role, ['admin', 'store_manager'])) {
+            return redirect()->route('purchases.index')->with('error', 'Anda tidak memiliki izin untuk menghapus.');
+        }
+
         $purchase->delete();
         return redirect()->route('purchases.index')->with('success', 'Pembelian berhasil dihapus.');
     }

@@ -1,39 +1,35 @@
 @extends('layouts.app')
-
+@section('page-title', 'Daftar Pengguna')
 @section('content')
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul>
+        @foreach ($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <div class="container-fluid">
-    <!-- {{-- Flash Message --}}
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul>
-                @foreach ($errors->all() as $e)
-                    <li>{{ $e }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif -->
 
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Manajemen Pengguna</h3>
+                <div class="card-header d-flex justify-content-between">
+                    <h3 class="card-title">KK SHELL CITRALAND CIREBON</h3>
+                    @if(in_array(Auth::user()->role, ['admin', 'store_manager']))
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
                             <i class="fas fa-plus"></i> Tambah Pengguna Baru
                         </button>
                     </div>
+                    @endif
                 </div>
 
                 <div class="card-body">
                     <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
-                                <!-- <th>ID</th> -->
                                 <th>Nama</th>
                                 <th>Email</th>
                                 <th>Peran</th>
@@ -44,16 +40,19 @@
                         <tbody>
                             @foreach($users as $user)
                             <tr>
-                                <!-- <td>{{ $user->id }}</td> -->
                                 <td>{{ $user->nama }}</td>
                                 <td>{{ $user->email }}</td>
                                 <td>
-                                    <span class="text-black badge badge-{{ $user->role == 'admin' ? 'primary' : 'secondary' }}">
+                                    <span class="badge 
+                                        @if($user->role == 'admin') bg-primary 
+                                        @elseif($user->role == 'store_manager') bg-warning 
+                                        @else bg-secondary @endif">
                                         {{ ucfirst($user->role) }}
                                     </span>
                                 </td>
                                 <td>{{ $user->created_at ? $user->created_at->format('d-m-Y H:i') : '-' }}</td>
                                 <td>
+                                    @if(in_array(Auth::user()->role, ['admin']))
                                     <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editUserModal{{ $user->id }}">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -64,6 +63,9 @@
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
+                                    @else
+                                    <span class="badge bg-secondary">Tidak Diizinkan</span>
+                                    @endif
                                 </td>
                             </tr>
                             @endforeach
@@ -80,6 +82,7 @@
     </div>
 </div>
 
+@if(in_array(Auth::user()->role, ['admin', 'store_manager']))
 <!-- Modal Tambah Pengguna -->
 <div class="modal fade" id="createUserModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
@@ -88,9 +91,7 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Tambah Pengguna Baru</h5>
-                    <button type="button" class="close" data-bs-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body">
@@ -113,6 +114,7 @@
                         <label>Peran</label>
                         <select name="role" class="form-control" required>
                             <option value="staff">Staff</option>
+                            <option value="store_manager">Store Manager</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
@@ -137,9 +139,7 @@
                 @method('PUT')
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Pengguna</h5>
-                    <button type="button" class="close" data-bs-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body">
@@ -162,6 +162,7 @@
                         <label>Peran</label>
                         <select name="role" class="form-control" required>
                             <option value="staff" {{ $user->role == 'staff' ? 'selected' : '' }}>Staff</option>
+                            <option value="store_manager" {{ $user->role == 'store_manager' ? 'selected' : '' }}>Store Manager</option>
                             <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Admin</option>
                         </select>
                     </div>
@@ -176,5 +177,6 @@
     </div>
 </div>
 @endforeach
+@endif
 
 @endsection

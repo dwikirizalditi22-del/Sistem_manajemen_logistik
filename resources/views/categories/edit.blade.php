@@ -14,17 +14,18 @@
                     
                     <div class="mb-3">
                         <label for="name" class="form-label">Category Name *</label>
-                        <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                               id="name" name="name" value="{{ old('name', $category->name) }}" required>
-                        @error('name')
+                        <input type="text" class="form-control @error('nama_kategori') is-invalid @enderror" 
+                               id="nama_kategori" name="nama_kategori" value="{{ old('nama_kategori', $category->nama_kategori) }}" required>
+                        @error('nama_kategori')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
+                    <label for="deskripsi" class="form-label">Description</label>
                         <textarea class="form-control @error('deskripsi') is-invalid @enderror" 
-                                  id="deskripsi" name="deskripsi" rows="3">{{ old('deskripsi', $category->deskripsi) }}</textarea>
+                                id="deskripsi" name="deskripsi" rows="3">{{ old('deskripsi', $category->deskripsi) }}</textarea>
+
                         @error('description')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror

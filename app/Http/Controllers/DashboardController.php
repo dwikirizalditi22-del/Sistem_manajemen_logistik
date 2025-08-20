@@ -2,47 +2,92 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Product;
-use App\Models\Category;
 use App\Models\Sale;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $totalProduk = Product::count(); 
-        $totalCategories = Category::count();
+        // Total semua produk
+        $totalProduk = Product::count();
 
-        // Produk dengan stok di bawah ambang batas, misalnya < 5
-        $lowStockItems = Product::where('stok', '<', 5)->count();
-        $lowStockProducts = Product::where('stok', '<', 5)->get();
+        // Jumlah produk dengan stok rendah (misalnya stok <= 5)
+        $lowStockItems = Product::where('stok', '<=', 5)->count();
 
-        // Total penjualan hari ini
-        $todaySales = Sale::whereDate('tanggal', now())->sum('total_harga');
+        // Total penjualan hari ini (jumlah harga total)
+        $todaySales = Sale::whereDate('tanggal', Carbon::today())
+            ->join('sale_details', 'sales.id', '=', 'sale_details.sale_id')
+            ->join('products', 'sale_details.product_id', '=', 'products.id')
+            ->sum(DB::raw('sale_details.jumlah * products.harga_jual'));
 
-        $monthlyRevenue = Sale::whereMonth('tanggal', now()->month)
-                            ->whereYear('tanggal', now()->year)
-                            ->sum('total_harga');
+        // Pendapatan bulan ini
+        $monthlyRevenue = Sale::whereMonth('tanggal', Carbon::now()->month)
+            ->whereYear('tanggal', Carbon::now()->year)
+            ->join('sale_details', 'sales.id', '=', 'sale_details.sale_id')
+            ->join('products', 'sale_details.product_id', '=', 'products.id')
+            ->sum(DB::raw('sale_details.jumlah * products.harga_jual'));
 
-        // Penjualan terbaru
-        $recentSales = Sale::with('customer')->latest()->take(5)->get();
+        // 5 penjualan terbaru
+        $latestSales = Sale::with(['user', 'saleDetails.product'])
+            ->orderBy('tanggal', 'desc')
+            ->take(5)
+            ->get();
 
-        // Data dummy tren penjualan 7 hari terakhir (harusnya pakai grup by tanggal penjualan)
-        $chartLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-        $chartData = [12000, 8000, 15000, 7000, 9000, 11000, 13000];
+        // Produk stok rendah untuk alert
+        $lowStockProducts = Product::where('stok', '<=', 5)->get();
 
-        return view('dashboard.index', compact(
-            'totalProduk',
-            'totalCategories',
-            'lowStockItems',
-            'lowStockProducts',
-            'todaySales',
-            'monthlyRevenue',
-            'recentSales',
-            'chartLabels',
-            'chartData'
-        ));
+        // Produk paling sering terjual
+        $bestSellingProducts = DB::table('sale_details')
+            ->join('products', 'sale_details.product_id', '=', 'products.id')
+            ->select('products.nama_produk', DB::raw('SUM(sale_details.jumlah) as total_terjual'))
+            ->groupBy('products.id', 'products.nama_produk')
+            ->orderByDesc('total_terjual')
+            ->take(5)
+            ->get();
+
+        // Produk paling cepat habis (30 hari terakhir)
+        $fastDepletingProducts = DB::table('sale_details')
+            ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_details.product_id', '=', 'products.id')
+            ->where('sales.tanggal', '>=', now()->subDays(30)) // 30 hari terakhir
+            ->select(
+                'products.nama_produk',
+                DB::raw('SUM(sale_details.jumlah) as total_terjual'),
+                'products.stok',
+                DB::raw('ROUND(SUM(sale_details.jumlah) / (SUM(sale_details.jumlah) + products.stok), 2) as kecepatan_habis')
+            )
+            ->groupBy('products.id', 'products.nama_produk', 'products.stok')
+            ->orderByDesc('kecepatan_habis')
+            ->take(5)
+            ->get();
+
+        // Pilih view sesuai role
+        if (Auth::user()->role === 'admin') {
+            return view('admin.index', compact(
+                'totalProduk',
+                'lowStockItems',
+                'todaySales',
+                'monthlyRevenue',
+                'latestSales',
+                'lowStockProducts',
+                'bestSellingProducts',
+                'fastDepletingProducts'
+            ));
+        } else {
+            return view('dashboard.index', compact(
+                'totalProduk',
+                'lowStockItems',
+                'todaySales',
+                'monthlyRevenue',
+                'latestSales',
+                'lowStockProducts',
+                'bestSellingProducts',
+                'fastDepletingProducts'
+            ));
+        }
     }
 }

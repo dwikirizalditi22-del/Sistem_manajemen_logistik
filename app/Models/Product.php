@@ -14,7 +14,8 @@ class Product extends Model
         'nama_produk',
         'harga_jual',
         'stok',
-        'deskripsi',       // opsional, jika kamu ingin menambahkan deskripsi produk
+        'deskripsi',
+        'supplier_id',       // opsional, jika kamu ingin menambahkan deskripsi produk
     ];
 
     public function category()
@@ -31,4 +32,9 @@ class Product extends Model
     {
         return $this->hasMany(SaleDetail::class);
     }
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
 }

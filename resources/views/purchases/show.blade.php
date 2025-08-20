@@ -70,9 +70,8 @@
                                     <th width="50">No</th>
                                     <th>Nama Produk</th>
                                     <th>Kode Produk</th>
-                                    <th width="100">Jumlah</th>
-                                    <th width="150">Harga Beli</th>
-                                    <th width="150">Subtotal</th>
+                                    <th class="text-center">Jumlah</th>
+                                    
                                 </tr>
                             </thead>
                             <tbody>
@@ -83,17 +82,13 @@
                                     <td>{{ $detail->product->nama_produk }}</td>
                                     <td>{{ $detail->product->kode_produk }}</td>
                                     <td class="text-center">{{ $detail->jumlah }}</td>
-                                    <td class="text-end">Rp {{ number_format($detail->harga_beli, 0, ',', '.') }}</td>
-                                    <td class="text-end">Rp {{ number_format($detail->subtotal, 0, ',', '.') }}</td>
+                                    
                                 </tr>
                                 @php $total += $detail->subtotal; @endphp
                                 @endforeach
                             </tbody>
                             <tfoot>
-                                <tr class="table-info">
-                                    <th colspan="5" class="text-end">Total Pembelian:</th>
-                                    <th class="text-end">Rp {{ number_format($total, 0, ',', '.') }}</th>
-                                </tr>
+                                
                             </tfoot>
                         </table>
                     </div>

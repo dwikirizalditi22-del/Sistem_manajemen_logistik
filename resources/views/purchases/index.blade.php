@@ -73,8 +73,6 @@
                         <th>Pembelian #</th>
                         <th>Tanggal</th>
                         <th>Pemasok</th>
-                        <th>Item</th>
-                        <th>Total</th>
                         <th>Status</th>
                         <th>Aksi</th>
                     </tr>
@@ -88,33 +86,59 @@
                             <strong>{{ $purchase->supplier->nama_supplier }}</strong><br>
                             <small class="text-muted">{{ $purchase->supplier->no_telepon }}</small>
                         </td>
-                        <td><span class="badge bg-info">{{ $purchase->purchaseDetails->count() }} item</span></td>
-                        <td><strong>Rp {{ number_format($purchase->total_harga, 0, ',', '.') }}</strong></td>
                         <td>
                             @if($purchase->status == 'pending')
                                 <span class="badge bg-warning">Menunggu</span>
                             @elseif($purchase->status == 'completed')
-                                <span class="badge bg-success">Selesai</span>
-                            @else
-                                <span class="badge bg-danger">Dibatalkan</span>
+                                <span class="badge bg-success">Accept</span>
+                            @elseif($purchase->status == 'cancelled')
+                                <span class="badge bg-danger">Canceled</span>
                             @endif
                         </td>
                         <td>
                             <div class="btn-group">
-                                <a href="{{ route('purchases.show', $purchase->id) }}" class="btn btn-sm btn-outline-info" title="Lihat">
+                                <!-- Tombol Lihat: Semua role bisa -->
+                                <a href="{{ route('purchases.show', $purchase->id) }}" 
+                                   class="btn btn-sm btn-outline-info" 
+                                   title="Lihat">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="{{ route('purchases.edit', $purchase->id) }}" class="btn btn-sm btn-outline-primary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                @if($purchase->status == 'pending')
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="updateStatus({{ $purchase->id }}, 'completed')" title="Selesai">
-                                    <i class="fas fa-check"></i>
-                                </button>
+
+                                <!-- Hanya admin & store_manager -->
+                                @if(in_array(Auth::user()->role, ['admin', 'store_manager']))
+
+                                    <!-- Edit -->
+                                    <a href="{{ route('purchases.edit', $purchase->id) }}" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+
+                                    <!-- Accept / Cancel -->
+                                    @if($purchase->status == 'pending')
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-success" 
+                                                onclick="updateStatus({{ $purchase->id }}, 'completed')" 
+                                                title="Terima">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger" 
+                                                onclick="updateStatus({{ $purchase->id }}, 'cancelled')" 
+                                                title="Batalkan">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    @endif
+
+                                    <!-- Delete -->
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            onclick="deletePurchase({{ $purchase->id }})" 
+                                            title="Hapus">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 @endif
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deletePurchase({{ $purchase->id }})" title="Hapus">
-                                    <i class="fas fa-trash"></i>
-                                </button>
                             </div>
                         </td>
                     </tr>
@@ -190,22 +214,40 @@
         window.location.href = '{{ route("purchases.index") }}';
     });
 
-    // Delete
+    // Delete (fix modal for Bootstrap 5)
     function deletePurchase(id) {
         const url = '{{ route("purchases.destroy", ":id") }}'.replace(':id', id);
         $('#deleteForm').attr('action', url);
-        $('#deleteModal').modal('show');
+
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
     }
 
-    // Status
+    // Update Status (fix CSRF and method injection)
     function updateStatus(id, status) {
         const form = $('<form>', {
             method: 'POST',
             action: '{{ route("purchases.update", ":id") }}'.replace(':id', id)
         });
-        form.append('@csrf');
-        form.append('@method("PUT")');
-        form.append($('<input>', { type: 'hidden', name: 'status', value: status }));
+
+        form.append($('<input>', {
+            type: 'hidden',
+            name: '_token',
+            value: '{{ csrf_token() }}'
+        }));
+
+        form.append($('<input>', {
+            type: 'hidden',
+            name: '_method',
+            value: 'PUT'
+        }));
+
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'status',
+            value: status
+        }));
+
         $('body').append(form);
         form.submit();
     }

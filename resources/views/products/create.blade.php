@@ -1,9 +1,18 @@
 @extends('layouts.app')
 
-@section('title', 'Add Product - CV. Agung')
+@section('title', 'Add Product')
 @section('page-title', 'Add New Product')
 
 @section('content')
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul>
+        @foreach ($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <div class="row">
     <div class="col-lg-8">
         <div class="card">
@@ -20,24 +29,7 @@
                                 @enderror
                             </div>
                         </div> -->
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="categories_id" class="form-label">Kategori *</label>
-                                <select class="form-select @error('categories_id') is-invalid @enderror" id="categories_id" name="categories_id" required>
-                                    <option value="">Pilih Kategori</option>
-                                    @foreach($categories ?? [] as $category)
-                                        <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                            {{ $category->nama_kategori }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('category_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-
+                        
                     <div class="mb-3">
                         <label for="name" class="form-label">Nama Produk *</label>
                         <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name') }}" required>
@@ -45,6 +37,20 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+                    <div class="mb-3">
+                    <label for="category_id" class="form-label">Kategori *</label>
+                    <select class="form-select @error('category_id') is-invalid @enderror" id="category_id" name="category_id" required>
+                        <option value="">-- Pilih Kategori --</option>
+                        @foreach($categories as $category)
+                            <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                {{ $category->nama_kategori }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('category_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
 
                     <div class="mb-3">
                         <label for="description" class="form-label">Deskripsi</label>
@@ -55,24 +61,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="purchase_price" class="form-label">Harga Beli *</label>
-                                <input type="number" class="form-control @error('purchase_price') is-invalid @enderror" id="purchase_price" name="purchase_price" value="{{ old('purchase_price') }}" step="0.01" required>
-                                @error('purchase_price')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="selling_price" class="form-label">Harga Jual *</label>
-                                <input type="number" class="form-control @error('selling_price') is-invalid @enderror" id="selling_price" name="selling_price" value="{{ old('selling_price') }}" step="0.01" required>
-                                @error('selling_price')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
+                       
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="unit" class="form-label">Satuan *</label>

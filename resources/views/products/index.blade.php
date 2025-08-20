@@ -1,29 +1,33 @@
 @extends('layouts.app')
 
-@section('title', 'Products - CV. Agung')
+@section('title', 'Products')
 @section('page-title', 'Manajemen Produk')
 
-@section('page-actions')
-<a href="{{ route('products.create') }}" class="btn btn-primary">
-    <i class="fas fa-plus me-1"></i> Tambah Produk Baru
-</a>
-@endsection
+
 
 @section('content')
 <div class="card">
     <div class="card-header">
         <div class="row align-items-center">
             <div class="col">
-                <h5 class="card-title mb-0">Daftar Produk</h5>
+                <h5 class="card-title mb-0"  class="btn btn-primary">Daftar Produk</h5>
             </div>
+           
             <div class="col-auto">
+            @if(in_array(Auth::user()->role, ['admin', 'store_manager']))
+        <a href="{{ route('products.create') }}" class="btn btn-primary mb-3">
+            <i class="fas fa-plus me-1"></i> Tambah Produk Baru
+        </a>
+        @endif
                 <form method="GET" class="d-flex">
                     <input type="text" name="search" class="form-control me-2" placeholder="Cari produk..." value="{{ request('search') }}">
                     <button type="submit" class="btn btn-outline-secondary">
                         <i class="fas fa-search"></i>
                     </button>
                 </form>
+               
             </div>
+            
         </div>
     </div>
     <div class="card-body">
@@ -35,7 +39,7 @@
                         <th>Nama</th>
                         <th>Kategori</th>
                         <th>Stok</th>
-                        <th>Harga</th>
+                        
                         <!-- <th>Status</th> -->
                         <th>Aksi</th>
                     </tr>
@@ -51,7 +55,7 @@
                                 {{ $product->stok}}
                             </span>
                         </td>
-                        <td>Rp {{ number_format($product->harga_jual, 0, ',', '.') }}</td>
+                       
                         <!-- <td>
                             <span class="badge {{ $product->is_active ? 'bg-success' : 'bg-secondary' }}">
                                 {{ $product->is_active ? 'Aktif' : 'Tidak Aktif' }}

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
 use App\Models\Product;
+use App\Models\Category;
 use App\Models\Sale;
 use App\Models\SaleDetail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB; // ⬅ ini yang bikin DB::transaction() bisa dipakai
 use Illuminate\Support\Facades\Auth;
 
 class SaleController extends Controller
@@ -19,66 +20,40 @@ class SaleController extends Controller
 
     public function create()
     {
-        $customers = Customer::all();
-        $products = Product::all()->map(function($product) {
-            return (object) [
-                'id' => $product->id,
-                'kode_produk' => $product->kode_produk,
-                'nama_produk' => $product->nama_produk,
-                'harga_jual' => $product->harga_jual,
-                'stok' => $product->stok
-            ];
-        });
+        // Ambil semua kategori beserta produknya
+        $categories = Category::with('products')->get();
 
-        $lastSale = Sale::latest()->first();
-        $nextId = $lastSale ? $lastSale->id + 1 : 1;
-        $kode_penjualan = 'PNJ-' . now()->format('Ymd') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
-
-        return view('sales.create', compact('customers', 'products', 'kode_penjualan'));
+        return view('sales.create', compact('categories'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'kode_penjualan' => 'required|unique:sales,kode_penjualan',
             'sale_date' => 'required|date',
-            'status' => 'required|string',
-            'items' => 'required|array',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|numeric|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
+            'items'     => 'required|array',
         ]);
-
-        $subtotal = 0;
-        foreach ($request->items as $item) {
-            $subtotal += $item['quantity'] * $item['unit_price'];
-        }
-
-        $tax = ($request->tax_percentage ?? 0) * $subtotal / 100;
-        $discount = $request->discount ?? 0;
-        $total = $subtotal + $tax - $discount;
 
         $sale = Sale::create([
-            'kode_penjualan' => $request->kode_penjualan,
-            'customer_id' => $request->customer_id,
             'tanggal' => $request->sale_date,
-            'total_harga' => $total,
             'user_id' => Auth::id(),
-            'status' => $request->status,
         ]);
 
-        foreach ($request->items as $item) {
-            SaleDetail::create([
-                'sale_id' => $sale->id,
-                'product_id' => $item['product_id'],
-                'jumlah' => $item['quantity'],
-                'harga_jual' => $item['unit_price'],
-                'subtotal' => $item['quantity'] * $item['unit_price'],
-            ]);
+        foreach ($request->items as $productId => $item) {
+            $jumlah = isset($item['jumlah']) ? (int) $item['jumlah'] : 0;
 
-            $product = Product::find($item['product_id']);
-            $product->stok -= $item['quantity'];
-            $product->save();
+            if ($jumlah > 0) {
+                SaleDetail::create([
+                    'sale_id'    => $sale->id,
+                    'product_id' => $productId,
+                    'jumlah'     => $jumlah,
+                ]);
+
+                $product = Product::find($productId);
+                if ($product) {
+                    $product->stok -= $jumlah;
+                    $product->save();
+                }
+            }
         }
 
         return redirect()->route('sales.index')->with('success', 'Penjualan berhasil disimpan!');
@@ -86,35 +61,80 @@ class SaleController extends Controller
 
     public function show($id)
     {
-        $sale = Sale::with(['customer', 'saleDetails.product'])->findOrFail($id);
+        $sale = Sale::with(['saleDetails.product'])->findOrFail($id);
         return view('sales.show', compact('sale'));
     }
 
-    public function edit($id)
-    {
-        $sale = Sale::with(['customer', 'saleDetails'])->findOrFail($id);
-        $customers = Customer::all();
-        return view('sales.edit', compact('sale', 'customers'));
-    }
+     // Tampilkan halaman edit — pastikan mengirim $products
+     public function edit($id)
+     {
+         $sale = Sale::with('saleDetails.product')->findOrFail($id);
+         $products = Product::orderBy('nama_produk')->get(); // <-- kirim ini ke view
+         return view('sales.edit', compact('sale', 'products'));
+     }
+ 
+     // Proses update
+     public function update(Request $request, $id)
+     {
+         $request->validate([
+             'tanggal' => 'required|date',
+             'details' => 'required|array|min:1',
+             'details.*.product_id' => 'required|exists:products,id',
+             'details.*.jumlah' => 'required|integer|min:1',
+         ]);
+ 
+         $sale = Sale::with('saleDetails')->findOrFail($id);
+ 
+         try {
+             DB::transaction(function () use ($request, $sale) {
+                 // 1) Kembalikan stok dari detail lama
+                 foreach ($sale->saleDetails as $old) {
+                     $prod = Product::find($old->product_id);
+                     if ($prod) {
+                         $prod->stok = $prod->stok + $old->jumlah;
+                         $prod->save();
+                     }
+                 }
+ 
+                 // 2) Hapus detail lama
+                 $sale->saleDetails()->delete();
+ 
+                 // 3) Update data sale
+                 $sale->tanggal = $request->tanggal;
+                 $sale->save();
+ 
+                 // 4) Simpan detail baru dan kurangi stok
+                 foreach ($request->details as $det) {
+                     $product = Product::find($det['product_id']);
+                     $qty = (int) $det['jumlah'];
+ 
+                     if (!$product) {
+                         throw new \Exception("Produk tidak ditemukan.");
+                     }
+ 
+                     if ($product->stok < $qty) {
+                         throw new \Exception("Stok tidak cukup untuk produk: {$product->nama_produk}. Stok saat ini: {$product->stok}");
+                     }
+ 
+                     // buat sale detail baru lewat relasi
+                     $sale->saleDetails()->create([
+                         'product_id' => $product->id,
+                         'jumlah' => $qty,
+                     ]);
+ 
+                     // kurangi stok
+                     $product->stok -= $qty;
+                     $product->save();
+                 }
+             });
+         } catch (\Exception $e) {
+             return redirect()->back()->withInput()->withErrors(['error' => $e->getMessage()]);
+         }
+ 
+         return redirect()->route('sales.show', $sale->id)->with('success', 'Penjualan berhasil diperbarui.');
+        }
 
-    public function update(Request $request, $id)
-    {
-        $sale = Sale::findOrFail($id);
-
-        $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
-            'tanggal' => 'required|date',
-            'status' => 'required|string|in:pending,completed,cancelled',
-        ]);
-
-        $sale->update([
-            'customer_id' => $request->customer_id,
-            'tanggal' => $request->tanggal,
-            'status' => $request->status,
-        ]);
-
-        return redirect()->route('sales.index')->with('success', 'Penjualan berhasil diperbarui!');
-    }
+    
 
     public function destroy($id)
     {

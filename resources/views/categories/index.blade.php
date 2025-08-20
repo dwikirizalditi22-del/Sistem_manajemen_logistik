@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Categories - CV. Agung')
+@section('title', 'Categories - Product ')
 @section('page-title', 'Manajemen Kategori')
 
 @section('content')
@@ -9,9 +9,11 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Daftar Kategori</h5>
+                @if(in_array(Auth::user()->role, ['admin', 'store_manager']))
                 <a href="{{ route('categories.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-1"></i> Kategori Baru
                 </a>
+                @endif
             </div>
             <div class="card-body">
                 <!-- Search -->
@@ -26,7 +28,6 @@
                     <table class="table table-striped table-hover">
                         <thead>
                             <tr>
-                                <!-- <th>ID</th> -->
                                 <th>Nama</th>
                                 <th>Deskripsi</th>
                                 <th>Jumlah Produk</th>
@@ -37,7 +38,6 @@
                         <tbody>
                             @forelse($categories ?? [] as $category)
                             <tr>
-                                <!-- <td>{{ $category->id }}</td> -->
                                 <td>
                                     <strong>{{ $category->nama_kategori }}</strong>
                                 </td>
@@ -53,12 +53,14 @@
                                         <a href="{{ route('categories.show', $category->id) }}" class="btn btn-sm btn-outline-info" title="Lihat">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        @if(in_array(Auth::user()->role, ['admin', 'store_manager']))
                                         <a href="{{ route('categories.edit', $category->id) }}" class="btn btn-sm btn-outline-primary" title="Edit">
                                             <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus" onclick="deleteCategory({{ $category->id }})">
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus" onclick="deleteCategory({{ $category->id }})">
                                             <i class="fas fa-trash"></i>
                                         </button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -68,9 +70,11 @@
                                     <div class="text-muted">
                                         <i class="fas fa-tags fa-3x mb-3"></i>
                                         <p>Tidak ada kategori ditemukan</p>
+                                        @if(in_array(Auth::user()->role, ['admin', 'store_manager']))
                                         <a href="{{ route('categories.create') }}" class="btn btn-primary">
                                             <i class="fas fa-plus me-1"></i> Buat Kategori
                                         </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

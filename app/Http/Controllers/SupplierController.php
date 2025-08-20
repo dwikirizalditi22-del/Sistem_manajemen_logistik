@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
+use App\Models\Report;
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class SupplierController extends Controller
@@ -40,7 +42,7 @@ class SupplierController extends Controller
     public function update(Request $request, Supplier $supplier)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:100',
+            'name_supplier' => 'required|string|max:100',
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
         ]);
